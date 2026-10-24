@@ -1,0 +1,26 @@
+[project]
+name = "keystone-odcs-workspace"
+version = "0.1.0"
+description = "Espace de travail Keystone ODCS : librairie keystone-core et CLI keystone-cli."
+authors = [
+    { name = "Hassane KARKACH", email = "karkach.hassane@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "keystone-core",
+    "keystone-cli",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["keystone-core/tests", "keystone-cli/tests"]

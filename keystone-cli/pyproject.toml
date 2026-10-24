@@ -1,0 +1,22 @@
+[project]
+name = "keystone-cli"
+version = "0.1.0"
+description = "Ligne de commande Keystone."
+readme = "README.md"
+authors = [
+    { name = "Hassane KARKACH", email = "karkach.hassane@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "keystone-core",
+]
+
+[project.scripts]
+keystone = "keystone_cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+keystone-core = { workspace = true }
