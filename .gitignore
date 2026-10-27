@@ -11,3 +11,6 @@ wheels/
 
 # Project brief (private)
 PROJET.md
+
+# Local Claude Code agents and skills (not published)
+.claude/

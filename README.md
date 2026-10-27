@@ -27,7 +27,7 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 - Le profil **restreint** ODCS : champs obligatoires, énumérations réduites, conventions.
 - Le profil **étend** ODCS uniquement par `customProperties`, le mécanisme prévu par le standard.
 - Le profil ne **contredit** jamais ODCS : pas de champ renommé, pas de sémantique détournée.
-- Le schéma JSON officiel d'ODCS est repris tel quel, sans modification.
+- Le schéma JSON officiel d'ODCS (**v3.2.0**) est repris tel quel, sans modification.
 
 ## Ce que doit faire un profil
 
@@ -37,8 +37,8 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 | Interdire | Exclure les blocs qu'on ne gouverne pas : pas de processus, pas de promesse dans le contrat |
 | Traitement de données | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
 | Qualité de données | Imposer des règles minimales via le bloc `quality` natif d'ODCS : unicité de la clé, non-nullité des champs critiques |
-| Modèle sémantique | S'appuyer sur les champs natifs d'ODCS et n'ajouter que ce qui manque : mesures, dimensions, grain, métriques |
-| Agent sémantique | Rendre le contrat lisible par un agent IA : définitions métier, métriques et relations assez précises pour qu'il interroge les données sans deviner |
+| Modèle sémantique | S'appuyer sur les champs natifs d'ODCS (mesures, dimensions, relations, synonymes) et n'ajouter que ce qui manque, comme le grain |
+| Agent sémantique | Rendre le contrat lisible par un agent IA avec le bloc `context` natif d'ODCS : consignes d'usage, questions validées et interdits, pour qu'il interroge les données sans deviner |
 
 ## Comment ça marche
 
