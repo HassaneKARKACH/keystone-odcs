@@ -18,10 +18,18 @@ team:
   members:
     - username: a_user
       role: owner
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
 schema:
   - name: a_table
     physicalName: a_table
     description: One row per example.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
     properties:
       - name: a_column
         logicalType: string

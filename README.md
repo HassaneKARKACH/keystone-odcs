@@ -33,8 +33,8 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 | --- | --- |
 | [Affiner](spec/01-proprietes-affinees.md) | Rendre obligatoire ce qu'ODCS laisse optionnel : description, owner, statut, conventions de nommage |
 | [Interdire](spec/02-proprietes-exclues.md) | Exclure les blocs qu'on ne gouverne pas, comme le prix, et les champs qu'ODCS a dépréciés |
-| Traitement de données | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
-| Qualité de données | Imposer des règles minimales via le bloc `quality` natif d'ODCS : unicité de la clé, non-nullité des champs critiques |
+| [Traitement de données](spec/03-extension-traitement.md) | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
+| [Qualité de données](spec/04-qualite-donnees.md) | Imposer des tests exécutables dans le bloc `quality` natif d'ODCS : tout en SQL, chaque test nommé, avec sa sévérité |
 | Modèle sémantique | S'appuyer sur les champs natifs d'ODCS (mesures, dimensions, relations, synonymes) et n'ajouter que ce qui manque, comme le grain |
 | Agent sémantique | Rendre le contrat lisible par un agent IA avec le bloc `context` natif d'ODCS : consignes d'usage, questions validées et interdits, pour qu'il interroge les données sans deviner |
 

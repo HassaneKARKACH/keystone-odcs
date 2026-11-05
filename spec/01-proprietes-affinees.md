@@ -79,6 +79,9 @@ dans une colonne `object` ou `array`.
 
 ## Un contrat conforme
 
+Il porte aussi la fréquence et le mode de chargement qu'exige
+l'[extension « traitement de données »](03-extension-traitement.md).
+
 ```yaml
 apiVersion: v3.2.0
 kind: DataContract
@@ -92,10 +95,18 @@ team:
   members:
     - username: a_user
       role: owner
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
 schema:
   - name: a_table
     physicalName: a_table
     description: One row per example.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
     properties:
       - name: a_column
         logicalType: string
