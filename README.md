@@ -31,8 +31,8 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 
 | Axe | Idée |
 | --- | --- |
-| Affiner | Rendre obligatoire ce qu'ODCS laisse optionnel : description, owner, classification, conventions de nommage |
-| Interdire | Exclure les blocs qu'on ne gouverne pas : pas de processus, pas de promesse dans le contrat |
+| [Affiner](spec/01-proprietes-affinees.md) | Rendre obligatoire ce qu'ODCS laisse optionnel : description, owner, statut, conventions de nommage |
+| [Interdire](spec/02-proprietes-exclues.md) | Exclure les blocs qu'on ne gouverne pas, comme le prix, et les champs qu'ODCS a dépréciés |
 | Traitement de données | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
 | Qualité de données | Imposer des règles minimales via le bloc `quality` natif d'ODCS : unicité de la clé, non-nullité des champs critiques |
 | Modèle sémantique | S'appuyer sur les champs natifs d'ODCS (mesures, dimensions, relations, synonymes) et n'ajouter que ce qui manque, comme le grain |

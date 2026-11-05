@@ -14,13 +14,13 @@ VALIDATOR = Draft201909Validator(SCHEMA, format_checker=Draft201909Validator.FOR
 
 @dataclass(frozen=True, order=True)
 class Violation:
-    """One place where a contract breaks the ODCS schema."""
+    """One place where a contract breaks ODCS or the Keystone profile."""
 
     path: str
     message: str
 
 
-def validate(contract: object) -> list[Violation]:
+def validate_odcs(contract: object) -> list[Violation]:
     """Return every ODCS violation of a contract, sorted by path."""
     # Several branches of the schema can raise the same error: list it once.
     violations = {Violation(error.json_path, error.message) for error in VALIDATOR.iter_errors(contract)}

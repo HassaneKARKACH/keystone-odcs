@@ -4,7 +4,7 @@ import hashlib
 
 import pytest
 
-from keystone_core import Violation, validate
+from keystone_core import Violation, validate_odcs
 from keystone_core.validation import SCHEMA_FILE
 
 # SHA-256 of schema/odcs-json-schema-v3.2.0.json at tag v3.2.0 of bitol-io/open-data-contract-standard.
@@ -21,21 +21,21 @@ def test_the_schema_is_the_official_one_unchanged():
 
 
 def test_a_minimal_contract_passes(contract):
-    assert validate(contract) == []
+    assert validate_odcs(contract) == []
 
 
 def test_a_missing_field_is_named(contract):
     del contract["id"]
-    assert validate(contract) == [Violation("$", "'id' is a required property")]
+    assert validate_odcs(contract) == [Violation("$", "'id' is a required property")]
 
 
 def test_a_wrong_value_points_to_its_field(contract):
     contract["schema"] = [{"name": "a_table", "properties": [{"name": "a_column", "logicalType": "text"}]}]
-    [violation] = validate(contract)
+    [violation] = validate_odcs(contract)
     assert violation.path == "$.schema[0].properties[0].logicalType"
     assert violation.message.startswith("'text' is not one of")
 
 
 def test_a_date_must_be_a_real_date(contract):
     contract["contractCreatedTs"] = "yesterday"
-    assert validate(contract) == [Violation("$.contractCreatedTs", "'yesterday' is not a 'date-time'")]
+    assert validate_odcs(contract) == [Violation("$.contractCreatedTs", "'yesterday' is not a 'date-time'")]

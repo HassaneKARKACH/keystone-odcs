@@ -5,7 +5,28 @@ from typer.testing import CliRunner
 
 from keystone_cli import app
 
-CONTRACT = "apiVersion: v3.2.0\nkind: DataContract\nid: example\nversion: 1.0.0\n"
+CONTRACT = """\
+apiVersion: v3.2.0
+kind: DataContract
+id: a_table
+name: a_table
+version: 1.0.0
+domain: example
+status: active
+team:
+  name: a_team
+  members:
+    - username: a_user
+      role: owner
+schema:
+  - name: a_table
+    physicalName: a_table
+    description: One row per example.
+    properties:
+      - name: a_column
+        logicalType: string
+        description: The key of an example.
+"""
 runner = CliRunner()
 
 
@@ -26,11 +47,21 @@ def test_validate_says_the_contract_is_validated(path):
     assert result.output == f"Contract validated: {path}\n"
 
 
-def test_validate_lists_the_violations_and_exits_1(path):
-    path.write_text(CONTRACT.replace("id: example\n", ""), encoding="utf-8")
+def test_validate_lists_the_odcs_violations_and_exits_1(path):
+    path.write_text(CONTRACT.replace("id: a_table\n", ""), encoding="utf-8")
     result = keystone("validate", path)
     assert result.exit_code == 1
-    assert result.output == f"Contract has errors: {path}\n  $: 'id' is a required property\n"
+    assert result.output == f"Contract is not valid ODCS: {path}\n  $: 'id' is a required property\n"
+
+
+def test_validate_lists_the_keystone_violations_and_exits_1(path):
+    path.write_text(CONTRACT.replace("status: active\n", "status: proposed\n"), encoding="utf-8")
+    result = keystone("validate", path)
+    assert result.exit_code == 1
+    assert result.output == (
+        f"Contract breaks the Keystone profile: {path}\n"
+        "  $.status: 'proposed': a status is draft, active or deprecated\n"
+    )
 
 
 def test_validate_exits_2_when_the_file_cannot_be_read(tmp_path):
