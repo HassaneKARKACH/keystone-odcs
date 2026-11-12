@@ -39,6 +39,8 @@ LOAD_MODES = ("append", "overwrite", "incremental")
 WATERMARK_TYPES = ("date", "timestamp")
 # What a failed quality check does: warn, or stop the load.
 SEVERITIES = ("warning", "error")
+# A sum, a count or a ratio gives a number.
+MEASURE_TYPES = ("number", "integer")
 
 
 def validate_profile(contract: dict) -> list[Violation]:
@@ -67,6 +69,9 @@ def validate_profile(contract: dict) -> list[Violation]:
     _sql_checks(contract, found)
     _check_names(contract, found)
     _check_severity(contract, found)
+    # Axis 5: semantic model.
+    _measure_logic(contract, found)
+    _measure_type(contract, found)
     return found
 
 
@@ -280,6 +285,27 @@ def _check_severity(contract: dict, found: list[Violation]) -> None:
             found.append(Violation(f"{path}.severity", "missing: a quality check says if a failure warns or stops"))
         elif check["severity"] not in SEVERITIES:
             found.append(Violation(f"{path}.severity", f"'{check['severity']}': severity is warning or error"))
+
+
+# ======================================================================
+# Axis 5: semantic model. A measure is computed in SQL, as a number.
+# ======================================================================
+
+
+def _measure_logic(contract: dict, found: list[Violation]) -> None:
+    # ODCS keeps the aggregation of a measure in transformLogic, but does not require it.
+    for column, path in _columns(contract):
+        if column.get("semanticType") == "measure" and "transformLogic" not in column:
+            found.append(Violation(f"{path}.transformLogic", "missing: a measure says how it is computed"))
+
+
+def _measure_type(contract: dict, found: list[Violation]) -> None:
+    for column, path in _columns(contract):
+        if column.get("semanticType") != "measure" or "logicalType" not in column:
+            continue
+        if column["logicalType"] not in MEASURE_TYPES:
+            message = f"'{column['logicalType']}': a measure is a number or an integer"
+            found.append(Violation(f"{path}.logicalType", message))
 
 
 # ======================================================================

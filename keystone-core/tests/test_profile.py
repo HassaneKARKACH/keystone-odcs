@@ -63,6 +63,20 @@ def check(table):
 
 
 @pytest.fixture
+def measure(table):
+    table["properties"].append(
+        {
+            "name": "row_count",
+            "semanticType": "measure",
+            "logicalType": "integer",
+            "description": "How many rows the table holds.",
+            "transformLogic": "COUNT(*)",
+        }
+    )
+    return table["properties"][1]
+
+
+@pytest.fixture
 def incremental(table):
     table["customProperties"] = [
         {"property": "loadMode", "vendor": "db-keystone", "value": "incremental"},
@@ -332,3 +346,27 @@ def test_the_severity_is_warning_or_error(contract, check):
     assert validate_profile(contract) == [
         Violation("$.schema[0].quality[0].severity", "'info': severity is warning or error")
     ]
+
+
+def test_a_measure_passes(contract, measure):
+    assert validate_odcs(contract) == []
+    assert validate_profile(contract) == []
+
+
+def test_a_measure_says_how_it_is_computed(contract, measure):
+    del measure["transformLogic"]
+    assert validate_profile(contract) == [
+        Violation("$.schema[0].properties[1].transformLogic", "missing: a measure says how it is computed")
+    ]
+
+
+def test_a_measure_is_a_number(contract, measure):
+    measure["logicalType"] = "string"
+    assert validate_profile(contract) == [
+        Violation("$.schema[0].properties[1].logicalType", "'string': a measure is a number or an integer")
+    ]
+
+
+def test_a_dimension_can_be_the_column_itself(contract, column):
+    column["semanticType"] = "dimension"
+    assert validate_profile(contract) == []
