@@ -80,8 +80,8 @@ dans une colonne `object` ou `array`.
 ## Un contrat conforme
 
 Il porte aussi la fréquence et le mode de chargement qu'exige
-l'[extension « traitement de données »](03-extension-traitement.md), et le contexte destiné aux
-agents IA.
+l'[extension « traitement de données »](03-extension-traitement.md), et le
+[contexte destiné aux agents IA](06-agent-semantique.md).
 
 ```yaml
 apiVersion: v3.2.0

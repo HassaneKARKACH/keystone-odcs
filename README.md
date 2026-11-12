@@ -36,7 +36,7 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 | [Traitement de données](keystone-docs/03-extension-traitement.md) | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
 | [Qualité de données](keystone-docs/04-qualite-donnees.md) | Imposer des tests exécutables dans le bloc `quality` natif d'ODCS : tout en SQL, chaque test nommé, avec sa sévérité |
 | [Modèle sémantique](keystone-docs/05-modele-semantique.md) | S'appuyer sur les champs natifs d'ODCS (mesures, dimensions, relations, synonymes), sans extension |
-| Agent sémantique | Rendre le contrat lisible par un agent IA avec le bloc `context` natif d'ODCS : consignes d'usage, questions validées et interdits, pour qu'il interroge les données sans deviner |
+| [Agent sémantique](keystone-docs/06-agent-semantique.md) | Rendre le contrat lisible par un agent IA avec le bloc `context` natif d'ODCS : consignes d'usage et questions validées, pour qu'il interroge les données sans deviner |
 
 ## Comment ça marche
 
