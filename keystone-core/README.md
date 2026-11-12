@@ -11,3 +11,7 @@ profil Keystone.
 
 Les deux vérifications renvoient une liste de `Violation`, chacune avec un `path` et un
 `message`. La liste est vide quand le contrat est conforme.
+
+Le schéma officiel, `schemas/odcs-json-schema-v3.2.0.json`, vient du dépôt
+[bitol-io/open-data-contract-standard](https://github.com/bitol-io/open-data-contract-standard),
+sous [licence Apache 2.0](https://github.com/bitol-io/open-data-contract-standard/blob/main/LICENSE).

@@ -1,7 +1,7 @@
 # Keystone ODCS
 
-> *An opinionated ODCS profile: fine-tuned and trimmed fields, plus extensions for data
-> processing and semantic modeling — still 100 % ODCS-compliant.*
+> *Un profil ODCS qui tranche : des champs affinés ou interdits, une extension pour le
+> traitement de données — et toujours 100 % conforme à ODCS.*
 
 Keystone est un exemple de profil ODCS : un projet pour illustrer comment adapter un standard
 ouvert de contrats de données, l'[Open Data Contract Standard (ODCS)](https://github.com/bitol-io/open-data-contract-standard),
