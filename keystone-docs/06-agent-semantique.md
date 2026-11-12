@@ -5,6 +5,8 @@ d'un montant, la question qu'on lui pose vraiment. Le profil part d'un principe,
 first** : chaque table doit pouvoir être interrogée par un agent. Il s'appuie sur le bloc `context`
 natif d'ODCS et n'ajoute aucun champ.
 
+https://github.com/user-attachments/assets/8365d32b-682c-43c0-877f-b0064c106b81
+
 ## Ce qu'ODCS prévoit
 
 | Champ | Ce que c'est |

@@ -5,6 +5,8 @@ durcit ce cadre : il **exige** des champs, **ferme** des listes de valeurs et **
 conventions. Ces règles s'appliquent à un contrat déjà valide ODCS : elles ne changent le sens
 d'aucun champ, elles en demandent davantage.
 
+https://github.com/user-attachments/assets/6e9dcbac-b6b3-442f-86dd-a8f572a91b4e
+
 ## Champs obligatoires
 
 ODCS n'exige que quatre champs : `apiVersion`, `kind`, `id` et `version`. Le profil en exige

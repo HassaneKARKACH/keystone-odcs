@@ -4,6 +4,8 @@ Un modèle sémantique dit ce que les colonnes veulent dire pour le métier : qu
 additionne, selon quels axes on les découpe, sous quels noms on les cherche. ODCS 3.2.0 porte déjà
 cette couche : le profil n'utilise que ses **champs natifs** et n'ajoute **aucune extension**.
 
+https://github.com/user-attachments/assets/ad65c1e5-a9c7-4836-9010-319d7bbaf88a
+
 ## Ce qu'ODCS couvre déjà
 
 | Notion | Champ ODCS |

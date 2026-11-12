@@ -5,6 +5,8 @@ complétée au fil de l'eau. Le contrat doit donc dire comment la table est alim
 question est de savoir **jusqu'où** : un contrat qui décrit le moteur et le planificateur devient
 une configuration d'orchestrateur.
 
+https://github.com/user-attachments/assets/2ce49d25-1351-45a7-a8dd-c1530f35cf75
+
 ## La frontière entre le quoi et le comment
 
 **Le contrat dit ce dont le consommateur dépend ; l'orchestrateur garde la façon de le produire.**

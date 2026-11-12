@@ -4,6 +4,8 @@ Dans un profil, on ne supprime pas un champ d'ODCS : on l'**interdit**. Le contr
 passer, et il reste un contrat ODCS valide. Le profil interdit deux sortes de champs : ceux
 qu'ODCS a **dépréciés**, et ceux qu'aucun **processus** ne gouverne.
 
+https://github.com/user-attachments/assets/6d95d224-89fe-4ee6-82f6-78f7ebd00ae5
+
 ## Champs dépréciés
 
 ODCS garde ses champs dépréciés pour la compatibilité, puis les retire. Un contrat qui les

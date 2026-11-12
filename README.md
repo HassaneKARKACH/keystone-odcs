@@ -7,7 +7,9 @@ Keystone est un exemple de profil ODCS : un projet pour illustrer comment adapte
 ouvert de contrats de données, l'[Open Data Contract Standard (ODCS)](https://github.com/bitol-io/open-data-contract-standard),
 en standard maison, sans le casser.
 
-![ODCS sert de base au profil Keystone, qui affine, interdit et étend ; le résultat est un contrat conforme ODCS et aux règles Keystone](assets/keystone-odcs.png)
+![ODCS sert de base au profil Keystone, qui affine, interdit et étend ; le résultat est un contrat conforme ODCS et aux règles Keystone](assets/keystone-odcs-schema.png)
+
+https://github.com/user-attachments/assets/cbb278c2-e9ab-4059-a381-f880ec2311f7
 
 ## Pourquoi
 

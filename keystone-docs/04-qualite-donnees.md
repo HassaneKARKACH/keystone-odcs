@@ -5,6 +5,8 @@ résultat qu'elle doit renvoyer. Un test se place sur la table ou sur une colonn
 de plusieurs sortes et laisse presque tout optionnel. Le profil en encadre la **forme**, pour que
 chaque test s'exécute tel quel et se lise clairement quand il échoue.
 
+https://github.com/user-attachments/assets/506d2575-9747-4c64-ba35-6e31533e78f2
+
 ## Tout en SQL
 
 ODCS connaît quatre types de tests :

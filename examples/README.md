@@ -3,6 +3,8 @@
 Les exemples appliquent le profil au datalake de **Cyclomatic**, une enseigne fictive qui vend
 des vélos en ligne et dans ses magasins.
 
+https://github.com/user-attachments/assets/34564604-96fe-4c87-bfe3-ba32671cf92b
+
 ## Le cas d'usage
 
 Cyclomatic charge dans son datalake les données de ses systèmes : la boutique en ligne, les
