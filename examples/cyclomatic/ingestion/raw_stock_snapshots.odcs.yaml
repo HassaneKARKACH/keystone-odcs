@@ -1,0 +1,109 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: raw_stock_snapshots
+name: raw_stock_snapshots
+version: 1.0.0
+domain: inventory
+status: active
+description:
+  purpose: Le stock de chaque magasin et de l'entrepôt, compté à la fermeture de chaque jour.
+team:
+  name: data-platform
+  members:
+    - username: hugo.lambert
+      role: owner
+    - username: nadia.cherif
+      role: data engineer
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+servers:
+  - server: wms_exports
+    type: sftp
+    location: sftp://wms.cyclomatic.example/exports/stock/
+    format: csv
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: lakehouse
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.cyclomatic.example/api/catalog
+    namespace: ${LAKE_RAW_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+schema:
+  - name: raw_stock_snapshots
+    physicalName: raw_stock_snapshots
+    businessName: Comptages de stock quotidiens
+    description: Une ligne par jour, emplacement et produit, avec le stock compté à la fermeture.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: append
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
+    quality:
+      - name: raw_stock_snapshots_reserved_within_stock
+        severity: warning
+        type: sql
+        dimension: consistency
+        description: Une commande ne peut pas réserver plus d'unités que l'emplacement n'en détient.
+        query: SELECT COUNT(*) FROM raw_stock_snapshots WHERE units_reserved > units_on_hand
+        mustBe: 0
+    context:
+      instructions: >-
+        Une photo quotidienne du stock : chaque jour ajoute un comptage complet de chaque
+        emplacement. Ne jamais sommer units_on_hand sur plusieurs jours ; choisir une seule
+        snapshot_date, la plus récente pour le stock du jour. WH-CENTRAL est l'entrepôt, les autres
+        emplacements sont des magasins.
+      verifiedStatements:
+        - question: Combien d'unités d'un produit peut-on encore vendre aujourd'hui ?
+          answer: >-
+            Sur la snapshot_date la plus récente, sommer units_on_hand moins units_reserved sur tous
+            les emplacements pour ce product_sku.
+        - question: Quels magasins ont manqué de vélos de ville le mois dernier ?
+    properties:
+      - name: snapshot_date
+        logicalType: date
+        description: Le jour où le stock a été compté, à la fermeture.
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+        partitioned: true
+        partitionKeyPosition: 1
+      - name: location_id
+        logicalType: string
+        description: Le magasin ou l'entrepôt qui détient le stock.
+        primaryKey: true
+        primaryKeyPosition: 2
+        required: true
+        examples:
+          - LYON-01
+          - WH-CENTRAL
+      - name: product_sku
+        logicalType: string
+        description: Le produit compté.
+        primaryKey: true
+        primaryKeyPosition: 3
+        required: true
+      - name: units_on_hand
+        logicalType: integer
+        description: Le nombre d'unités physiquement présentes.
+        required: true
+        quality:
+          - name: raw_stock_snapshots_units_are_not_negative
+            severity: error
+            type: sql
+            dimension: accuracy
+            query: SELECT COUNT(*) FROM raw_stock_snapshots WHERE units_on_hand < 0
+            mustBe: 0
+      - name: units_reserved
+        logicalType: integer
+        description: Le nombre de ces unités déjà réservées par une commande.
+        required: true

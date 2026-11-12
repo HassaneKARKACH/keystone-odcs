@@ -1,0 +1,124 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: raw_store_sales
+name: raw_store_sales
+version: 1.0.0
+domain: sales
+status: active
+description:
+  purpose: Les lignes de ticket des magasins, copiées chaque nuit depuis les caisses.
+  limitations: Les prix sont TTC. Une vente en magasin n'est liée à un client que s'il présente sa carte de fidélité.
+team:
+  name: data-platform
+  members:
+    - username: hugo.lambert
+      role: owner
+    - username: nadia.cherif
+      role: data engineer
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+  - property: latency
+    value: 30
+    unit: h
+    element: sold_at
+servers:
+  - server: pos_db
+    type: sqlserver
+    host: ${POS_DB_HOST}
+    port: ${POS_DB_PORT}
+    database: ${POS_DB_NAME}
+    schema: ${POS_DB_SCHEMA}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: lakehouse
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.cyclomatic.example/api/catalog
+    namespace: ${LAKE_RAW_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+schema:
+  - name: raw_store_sales
+    physicalName: raw_store_sales
+    businessName: Lignes de ticket de caisse
+    description: Une ligne par ligne de ticket imprimé par une caisse de magasin.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: append
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
+    quality:
+      - name: raw_store_sales_has_yesterday
+        severity: error
+        type: sql
+        dimension: completeness
+        query: SELECT COUNT(*) FROM raw_store_sales WHERE sale_date = CURRENT_DATE - INTERVAL '1' DAY
+        mustBeGreaterThan: 0
+    context:
+      instructions: >-
+        Une ligne par ligne de ticket des magasins. Les lignes sont seulement ajoutées, jamais
+        modifiées : un retour est une nouvelle ligne de quantité négative, donc une simple somme de
+        quantity déduit déjà les retours. Les prix sont en euros TTC.
+      verifiedStatements:
+        - question: Combien de vélos le magasin de Lyon a-t-il vendus la semaine dernière ?
+          answer: >-
+            Sommer quantity sur les lignes du store_id 'LYON-01' dont sale_date tombe la semaine
+            dernière, en ne gardant que les produits d'une catégorie de vélo dans products.
+        - question: Quel magasin a le plus de retours ?
+      constraints:
+        - constraint: Ne pas choisir un jour avec sold_at, qui est en UTC. Utiliser sale_date, le jour dans le fuseau horaire du magasin.
+    properties:
+      - name: receipt_id
+        logicalType: string
+        description: Le numéro du ticket, unique pour tous les magasins.
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+        examples:
+          - LYON-01-20261112-0042
+      - name: line_number
+        logicalType: integer
+        description: La position de la ligne sur le ticket, à partir de 1.
+        primaryKey: true
+        primaryKeyPosition: 2
+        required: true
+      - name: store_id
+        logicalType: string
+        description: Le magasin où la vente a eu lieu.
+        required: true
+        examples:
+          - LYON-01
+          - NANTES-01
+      - name: sold_at
+        logicalType: timestamp
+        description: La date et l'heure d'impression du ticket, en UTC.
+        required: true
+      - name: sale_date
+        logicalType: date
+        description: Le jour de la vente, dans le fuseau horaire du magasin.
+        required: true
+        partitioned: true
+        partitionKeyPosition: 1
+      - name: customer_id
+        logicalType: string
+        description: Le client, quand il présente sa carte de fidélité ; vide sinon.
+      - name: product_sku
+        logicalType: string
+        description: Le produit vendu.
+        required: true
+      - name: quantity
+        logicalType: integer
+        description: Le nombre d'unités vendues ; négatif pour un retour.
+        required: true
+      - name: unit_price
+        logicalType: number
+        description: Le prix d'une unité, en euros TTC, après la remise du magasin.
+        required: true

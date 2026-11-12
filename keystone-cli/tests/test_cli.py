@@ -30,6 +30,9 @@ schema:
       - property: loadMode
         vendor: db-keystone
         value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
     context:
       instructions: One row per example.
       verifiedStatements:

@@ -23,7 +23,10 @@ def contract():
                 "name": "a_table",
                 "physicalName": "a_table",
                 "description": "One row per example.",
-                "customProperties": [{"property": "loadMode", "vendor": "db-keystone", "value": "overwrite"}],
+                "customProperties": [
+                    {"property": "loadMode", "vendor": "db-keystone", "value": "overwrite"},
+                    {"property": "layer", "vendor": "db-keystone", "value": "dataProduct"},
+                ],
                 "context": {
                     "instructions": "One row per example.",
                     "verifiedStatements": [
@@ -84,12 +87,26 @@ def measure(table):
 
 @pytest.fixture
 def incremental(table):
-    table["customProperties"] = [
-        {"property": "loadMode", "vendor": "db-keystone", "value": "incremental"},
-        {"property": "watermarkColumn", "vendor": "db-keystone", "value": "updated_at"},
-    ]
+    table["customProperties"][0]["value"] = "incremental"
+    table["customProperties"].insert(1, {"property": "watermarkColumn", "vendor": "db-keystone", "value": "updated_at"})
     table["properties"].append({"name": "updated_at", "logicalType": "timestamp", "description": "Last change."})
     return table
+
+
+def server(role):
+    return {
+        "server": f"a_{role}",
+        "type": "api",
+        "location": "https://example.com/api",
+        "customProperties": [{"property": "serverRole", "vendor": "db-keystone", "value": role}],
+    }
+
+
+@pytest.fixture
+def ingestion(contract, table):
+    table["customProperties"][1]["value"] = "ingestion"
+    contract["servers"] = [server("source"), server("destination")]
+    return contract["servers"]
 
 
 def test_a_contract_that_follows_the_profile_passes(contract):
@@ -204,7 +221,7 @@ def test_a_contract_has_no_price(contract):
 
 
 def test_a_table_says_how_it_is_loaded(contract, table):
-    del table["customProperties"]
+    del table["customProperties"][0]
     assert validate_profile(contract) == [
         Violation("$.schema[0].customProperties", "missing: a table says how it is loaded, in loadMode")
     ]
@@ -244,7 +261,7 @@ def test_an_incremental_table_has_a_primary_key(contract, incremental, column):
 
 
 def test_an_incremental_table_names_its_watermark(contract, incremental):
-    incremental["customProperties"].pop()
+    del incremental["customProperties"][1]
     assert validate_profile(contract) == [
         Violation("$.schema[0].customProperties", "missing: an incremental load names its watermarkColumn")
     ]
@@ -293,6 +310,82 @@ def test_a_latency_column_exists(contract):
     contract["slaProperties"].append({"property": "latency", "value": 4, "unit": "h", "element": "another_column"})
     assert validate_profile(contract) == [
         Violation("$.slaProperties[1].element", "'another_column': not a column of the table")
+    ]
+
+
+def test_a_table_says_if_it_is_an_ingestion_or_a_data_product(contract, table):
+    del table["customProperties"][1]
+    assert validate_profile(contract) == [
+        Violation(
+            "$.schema[0].customProperties", "missing: a table says if it is an ingestion or a data product, in layer"
+        )
+    ]
+
+
+def test_the_layer_is_ingestion_or_data_product(contract, table):
+    table["customProperties"][1]["value"] = "raw"
+    assert validate_profile(contract) == [
+        Violation("$.schema[0].customProperties", "'raw': layer is ingestion or dataProduct")
+    ]
+
+
+def test_an_ingestion_with_a_source_and_a_destination_passes(contract, ingestion):
+    assert validate_odcs(contract) == []
+    assert validate_profile(contract) == []
+
+
+def test_a_server_says_what_it_is_for(contract, ingestion):
+    del ingestion[0]["customProperties"]
+    assert validate_profile(contract) == [
+        Violation(
+            "$.servers[0].customProperties",
+            "missing: a server says if it is a source, a destination or a processing server, in serverRole",
+        ),
+        Violation("$.servers", "no source server: an ingestion names where its data comes from"),
+    ]
+
+
+def test_the_server_role_is_source_destination_or_processing(contract, ingestion):
+    contract["servers"].append(server("backup"))
+    assert validate_profile(contract) == [
+        Violation("$.servers[2].customProperties", "'backup': serverRole is source, destination or processing")
+    ]
+
+
+def test_an_ingestion_names_its_source(contract, ingestion):
+    ingestion.pop(0)
+    assert validate_profile(contract) == [
+        Violation("$.servers", "no source server: an ingestion names where its data comes from")
+    ]
+
+
+def test_an_ingestion_names_its_destination(contract, ingestion):
+    ingestion.pop()
+    assert validate_profile(contract) == [
+        Violation("$.servers", "no destination server: an ingestion names where its data lands")
+    ]
+
+
+def test_a_data_product_names_the_server_where_it_is_built(contract):
+    contract["servers"] = [server("processing")]
+    assert validate_odcs(contract) == []
+    assert validate_profile(contract) == []
+
+
+def test_a_data_product_has_one_server_at_most(contract):
+    contract["servers"] = [server("processing"), server("processing")]
+    assert validate_profile(contract) == [
+        Violation("$.servers", "2 servers: a data product has at most one, the server where it is built")
+    ]
+
+
+def test_the_server_of_a_data_product_is_a_processing_server(contract):
+    contract["servers"] = [server("source")]
+    assert validate_profile(contract) == [
+        Violation(
+            "$.servers[0].customProperties",
+            "'source': the server of a data product is where it is built, serverRole: processing",
+        )
     ]
 
 

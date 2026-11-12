@@ -11,10 +11,11 @@ une configuration d'orchestrateur.
 
 | Dans le contrat | Chez l'orchestrateur |
 | --- | --- |
-| Comment les lignes changent : le mode de chargement | Le moteur, le planificateur, les relances |
-| Tous les combien : la fréquence | Le clustering, réglage physique propre au moteur |
-| Avec quel retard : la fraîcheur | La gestion des rejets : les lignes perdues relèvent de la qualité |
-| Comment lire vite : le partitionnement | Les connexions aux sources |
+| Comment les lignes changent : le mode de chargement | Le réglage du moteur, le planificateur |
+| Tous les combien : la fréquence | Les relances |
+| Avec quel retard : la fraîcheur | Le clustering, réglage physique propre au moteur |
+| Comment lire vite : le partitionnement | La gestion des rejets : les lignes perdues relèvent de la qualité |
+| D'où viennent les données et où elles sont : les serveurs | Les identifiants et les options de connexion |
 
 ## Ce qu'ODCS couvre déjà
 
@@ -79,6 +80,52 @@ customProperties:
     value: updated_at
 ```
 
+## Les serveurs
+
+Le bloc `servers` d'ODCS dit où se trouvent les données. Le profil distingue deux sortes de
+contrats : un contrat d'**ingestion** copie un système source dans le datalake, un **produit de
+données** est construit à partir d'autres tables du datalake. Les serveurs à déclarer en dépendent.
+
+**La couche.** ODCS n'a pas de champ pour cette distinction : le profil ajoute la propriété `layer`,
+obligatoire, dans les `customProperties` de la table, à côté de `loadMode`. Elle vaut `ingestion`
+ou `dataProduct`.
+
+**Le rôle des serveurs.** ODCS dit où est un serveur, pas à quoi il sert. Le profil ajoute la
+propriété `serverRole` dans les `customProperties` de chaque serveur : `source`, `destination` ou
+`processing`.
+
+| `layer` | Serveurs | Pourquoi |
+| --- | --- | --- |
+| `ingestion` | Au moins une `source` et une `destination` | Le contrat dit d'où viennent les données et où elles arrivent |
+| `dataProduct` | Au plus un, de rôle `processing` | Ses données viennent d'autres contrats du datalake : il ne déclare que le serveur où il est construit |
+
+Les hôtes, ports, bases et schémas peuvent s'écrire en variables, `${...}`, résolues à
+l'exécution : un même contrat sert alors tous les environnements. ODCS refuse ces variables dans
+les champs au format URI, comme `catalogUrl` ou `location`.
+
+```yaml
+servers:
+  - server: a_source
+    type: postgres
+    host: ${SOURCE_HOST}
+    port: ${SOURCE_PORT}
+    database: ${SOURCE_DATABASE}
+    schema: ${SOURCE_SCHEMA}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: a_lake
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.example.com/api/catalog
+    namespace: ${LAKE_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+```
+
 ## Ce que le profil ne vérifie pas
 
 - Que les promesses sont **tenues** : la fréquence et le retard réels se mesurent en production,
@@ -86,6 +133,7 @@ customProperties:
 - Les **synonymes** des propriétés SLA : ODCS accepte `fy` pour `frequency` et `ly` pour
   `latency`, sans tenir compte de la casse. Le profil ne lit que les noms `frequency` et `latency`.
 - Le **nom de la plateforme** dans le vendor : tout vendor qui finit par `-keystone` est lu.
+- La **technologie** des serveurs : le profil vérifie leur rôle, pas leur type.
 
 ## Un contrat conforme
 
@@ -110,6 +158,26 @@ slaProperties:
     value: 4
     unit: h
     element: updated_at
+servers:
+  - server: a_source
+    type: postgres
+    host: ${SOURCE_HOST}
+    port: ${SOURCE_PORT}
+    database: ${SOURCE_DATABASE}
+    schema: ${SOURCE_SCHEMA}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: a_lake
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.example.com/api/catalog
+    namespace: ${LAKE_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
 schema:
   - name: a_table
     physicalName: a_table
@@ -121,6 +189,9 @@ schema:
       - property: watermarkColumn
         vendor: db-keystone
         value: updated_at
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
     context:
       instructions: One row per example.
       verifiedStatements:

@@ -1,0 +1,100 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: raw_products
+name: raw_products
+version: 2.0.0
+domain: catalog
+status: active
+description:
+  purpose: Le catalogue produits, copié chaque nuit depuis le référentiel produits.
+team:
+  name: data-platform
+  members:
+    - username: hugo.lambert
+      role: owner
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+servers:
+  - server: pim_api
+    type: api
+    location: https://pim.cyclomatic.example/api/v2/products
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: lakehouse
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.cyclomatic.example/api/catalog
+    namespace: ${LAKE_RAW_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+schema:
+  - name: raw_products
+    physicalName: raw_products
+    businessName: Catalogue produits
+    description: Une ligne par produit du catalogue, copiée du référentiel produits.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
+    quality:
+      - name: raw_products_sku_is_unique
+        severity: error
+        type: sql
+        dimension: uniqueness
+        query: SELECT COUNT(*) - COUNT(DISTINCT product_sku) FROM raw_products
+        mustBe: 0
+    context:
+      instructions: >-
+        Une ligne par produit du catalogue. La table est remplacée chaque nuit : elle ne contient que
+        le catalogue du jour, sans historique des prix. Les prix catalogue sont en euros TTC.
+      verifiedStatements:
+        - question: Combien de vélos électriques sont en vente ?
+          answer: Compter les lignes de raw_products dont category vaut 'electric' et is_active vaut true.
+    properties:
+      - name: product_sku
+        logicalType: string
+        logicalTypeOptions:
+          pattern: ^[A-Z]{3}-[0-9]{4}$
+        description: La référence du produit, son code SKU.
+        primaryKey: true
+        required: true
+        examples:
+          - CTY-0421
+          - EBK-0107
+      - name: product_name
+        logicalType: string
+        description: Le nom du produit affiché aux clients.
+        required: true
+        examples:
+          - Urbano 7 city bike
+      - name: category
+        logicalType: string
+        description: La famille du produit.
+        required: true
+        enum:
+          - value: city
+          - value: electric
+          - value: road
+          - value: mountain
+          - value: kids
+          - value: accessory
+      - name: frame_size
+        logicalType: string
+        description: La taille du cadre d'un vélo, de XS à XL ; vide pour un accessoire.
+      - name: list_price
+        logicalType: number
+        description: Le prix catalogue, en euros TTC.
+        required: true
+      - name: is_active
+        logicalType: boolean
+        description: Faux dès que le produit n'est plus vendu.
+        required: true

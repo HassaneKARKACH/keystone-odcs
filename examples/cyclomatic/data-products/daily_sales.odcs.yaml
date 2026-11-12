@@ -1,0 +1,154 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: daily_sales
+name: daily_sales
+version: 2.1.0
+domain: sales
+status: active
+description:
+  purpose: Les ventes de tous les canaux, par jour, magasin et produit, pour le reporting et les prévisions.
+  usage: La référence pour le chiffre d'affaires et les unités vendues. Construit à partir de raw_web_orders et raw_store_sales.
+  limitations: >-
+    Une vente web compte le jour de la commande, une vente en magasin le jour du ticket. Les
+    commandes web annulées sont écartées, les retours sont déduits le jour où ils reviennent.
+team:
+  name: sales-analytics
+  members:
+    - username: sarah.benali
+      role: owner
+    - username: julien.petit
+      role: data analyst
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+  - property: latency
+    value: 30
+    unit: h
+    element: sale_date
+servers:
+  - server: warehouse
+    type: bigquery
+    project: ${GCP_PROJECT}
+    dataset: ${PRODUCTS_DATASET}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: processing
+schema:
+  - name: daily_sales
+    physicalName: daily_sales
+    businessName: Ventes quotidiennes
+    description: Une ligne par jour, canal, magasin et produit vendu, avec les unités et le chiffre d'affaires du jour.
+    synonyms:
+      - synonym: sales
+      - synonym: ventes
+        locale: fr-FR
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
+    quality:
+      - name: daily_sales_has_yesterday
+        severity: error
+        type: sql
+        dimension: timeliness
+        query: SELECT COUNT(*) FROM daily_sales WHERE sale_date = CURRENT_DATE - INTERVAL '1' DAY
+        mustBeGreaterThan: 0
+      - name: daily_sales_has_both_channels
+        severity: warning
+        type: sql
+        dimension: completeness
+        description: Un canal absent un jour signifie qu'une source n'a pas été chargée.
+        query: SELECT COUNT(DISTINCT channel) FROM daily_sales WHERE sale_date = CURRENT_DATE - INTERVAL '1' DAY
+        mustBe: 2
+    context:
+      instructions: >-
+        Les ventes de la boutique en ligne et des magasins, une ligne par jour, canal, magasin et
+        produit. revenue est en euros HT, retours déduits : l'utiliser pour tout chiffre d'affaires.
+        Pour une période, sommer les lignes du jour, ne jamais en faire la moyenne. Les ventes en
+        ligne ont le store_id 'WEB'.
+      verifiedStatements:
+        - question: Quel a été le chiffre d'affaires du mois dernier ?
+          answer: Sommer revenue sur les lignes dont sale_month est le premier jour du mois dernier.
+        - question: Quel magasin vend le plus de vélos électriques ?
+          answer: >-
+            Joindre products sur product_sku, garder la catégorie 'electric' et le canal 'store', puis
+            sommer units_sold par store_id et prendre le plus élevé.
+        - question: Comment se comparent la boutique en ligne et les magasins cette année ?
+      constraints:
+        - constraint: Ne pas comparer revenue avec le list_price de products. revenue est HT, les prix catalogue sont TTC.
+    properties:
+      - name: sale_date
+        logicalType: date
+        description: Le jour de la vente.
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+        semanticType: dimension
+      - name: channel
+        logicalType: string
+        description: Le canal de la vente.
+        primaryKey: true
+        primaryKeyPosition: 2
+        required: true
+        semanticType: dimension
+        enum:
+          - value: web
+            description: La boutique en ligne.
+          - value: store
+            description: Une caisse de magasin.
+      - name: store_id
+        logicalType: string
+        description: Le magasin de la vente ; WEB pour la boutique en ligne.
+        primaryKey: true
+        primaryKeyPosition: 3
+        required: true
+        semanticType: dimension
+        examples:
+          - WEB
+          - LYON-01
+      - name: product_sku
+        logicalType: string
+        description: Le produit vendu.
+        primaryKey: true
+        primaryKeyPosition: 4
+        required: true
+        semanticType: dimension
+        relationships:
+          - to: products.product_sku
+      - name: units_sold
+        logicalType: integer
+        description: Les unités vendues ce jour-là, retours déduits.
+        required: true
+      - name: revenue
+        logicalType: number
+        description: Le chiffre d'affaires du jour, en euros HT, retours déduits.
+        required: true
+        synonyms:
+          - synonym: turnover
+          - synonym: chiffre d'affaires
+            locale: fr-FR
+      - name: sale_month
+        logicalType: date
+        description: Le mois de la vente, sous la forme de son premier jour.
+        semanticType: dimension
+        transformLogic: DATE_TRUNC('MONTH', sale_date)
+      - name: total_revenue
+        logicalType: number
+        description: Le chiffre d'affaires des lignes retenues, en euros HT.
+        semanticType: measure
+        transformLogic: SUM(revenue)
+      - name: total_units_sold
+        logicalType: integer
+        description: Les unités vendues sur les lignes retenues.
+        semanticType: measure
+        transformLogic: SUM(units_sold)
+      - name: average_selling_price
+        logicalType: number
+        description: Le chiffre d'affaires par unité vendue, en euros HT.
+        semanticType: measure
+        transformLogic: SUM(revenue) / NULLIF(SUM(units_sold), 0)

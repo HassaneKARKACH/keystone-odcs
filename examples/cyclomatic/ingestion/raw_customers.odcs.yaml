@@ -1,0 +1,105 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: raw_customers
+name: raw_customers
+version: 1.3.0
+domain: customer
+status: active
+description:
+  purpose: Les comptes clients, copiés chaque nuit depuis l'outil de relation client.
+  limitations: Contient des données personnelles. Un client qui demande l'effacement est supprimé de l'outil, puis de cette table.
+team:
+  name: data-platform
+  members:
+    - username: hugo.lambert
+      role: owner
+    - username: nadia.cherif
+      role: data engineer
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+servers:
+  - server: crm_api
+    type: api
+    location: https://crm.cyclomatic.example/api/v1/customers
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: lakehouse
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.cyclomatic.example/api/catalog
+    namespace: ${LAKE_RAW_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+schema:
+  - name: raw_customers
+    physicalName: raw_customers
+    businessName: Comptes clients
+    description: Une ligne par compte client, copiée de l'outil de relation client.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: incremental
+      - property: watermarkColumn
+        vendor: db-keystone
+        value: updated_at
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
+    quality:
+      - name: raw_customers_email_is_unique
+        severity: warning
+        type: sql
+        dimension: uniqueness
+        query: SELECT COUNT(*) - COUNT(DISTINCT email) FROM raw_customers
+        mustBe: 0
+    context:
+      instructions: >-
+        Une ligne par compte client, en ligne ou en magasin. La table contient des données
+        personnelles : répondre avec des comptages et des parts, jamais avec le détail d'une personne.
+      verifiedStatements:
+        - question: Combien de clients font partie du programme de fidélité ?
+          answer: Compter les lignes de raw_customers dont is_loyalty_member vaut true.
+        - question: Où vivent les clients de la boutique en ligne ?
+      constraints:
+        - constraint: Ne jamais renvoyer une adresse e-mail, même sur demande.
+    properties:
+      - name: customer_id
+        logicalType: string
+        description: Le numéro du compte client.
+        primaryKey: true
+        required: true
+        examples:
+          - C-0045821
+      - name: email
+        logicalType: string
+        logicalTypeOptions:
+          format: email
+        description: L'adresse e-mail du client, donnée personnelle.
+        required: true
+      - name: postal_code
+        logicalType: string
+        description: Le code postal de l'adresse de livraison.
+      - name: country
+        logicalType: string
+        description: Le pays de l'adresse de livraison, en code ISO 3166.
+        examples:
+          - FR
+          - BE
+      - name: signed_up_at
+        logicalType: timestamp
+        description: La date et l'heure de création du compte.
+        required: true
+      - name: is_loyalty_member
+        logicalType: boolean
+        description: Vrai quand le client a rejoint le programme de fidélité.
+        required: true
+      - name: updated_at
+        logicalType: timestamp
+        description: La date et l'heure de la dernière modification du compte dans l'outil de relation client.
+        required: true

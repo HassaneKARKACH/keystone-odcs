@@ -33,7 +33,7 @@ l'écosystème du standard. Reste une troisième voie : **un profil**.
 | --- | --- |
 | [Affiner](keystone-docs/01-proprietes-affinees.md) | Rendre obligatoire ce qu'ODCS laisse optionnel : description, owner, statut, conventions de nommage |
 | [Interdire](keystone-docs/02-proprietes-exclues.md) | Exclure les blocs qu'on ne gouverne pas, comme le prix, et les champs qu'ODCS a dépréciés |
-| [Traitement de données](keystone-docs/03-extension-traitement.md) | Décrire comment la table est alimentée : mode de chargement, fréquence, partitionnement, fraîcheur |
+| [Traitement de données](keystone-docs/03-extension-traitement.md) | Décrire comment la table est alimentée : serveurs source et destination, mode de chargement, fréquence, partitionnement, fraîcheur |
 | [Qualité de données](keystone-docs/04-qualite-donnees.md) | Imposer des tests exécutables dans le bloc `quality` natif d'ODCS : tout en SQL, chaque test nommé, avec sa sévérité |
 | [Modèle sémantique](keystone-docs/05-modele-semantique.md) | S'appuyer sur les champs natifs d'ODCS (mesures, dimensions, relations, synonymes), sans extension |
 | [Agent sémantique](keystone-docs/06-agent-semantique.md) | Rendre le contrat lisible par un agent IA avec le bloc `context` natif d'ODCS : consignes d'usage et questions validées, pour qu'il interroge les données sans deviner |
@@ -61,6 +61,12 @@ $ keystone validate contrat.yaml
 Le validateur distingue deux types d'erreurs : les erreurs **ODCS** (le contrat n'est pas un
 contrat ODCS valide) et les erreurs **Keystone** (le contrat est valide ODCS, mais ne respecte pas
 le profil).
+
+## Exemples
+
+Le dossier [examples/](examples/) applique le profil au datalake de Cyclomatic, une enseigne
+fictive de vélos : des contrats d'ingestion, des produits de données et des contrats invalides,
+validés par la bibliothèque et par la CLI.
 
 ## Développement
 

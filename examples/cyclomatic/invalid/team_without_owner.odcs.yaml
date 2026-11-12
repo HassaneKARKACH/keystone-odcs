@@ -1,0 +1,116 @@
+# Invalid: the team has no member with role: owner.
+apiVersion: v3.2.0
+kind: DataContract
+id: products
+name: products
+version: 1.2.0
+domain: catalog
+status: active
+description:
+  purpose: La liste de référence des produits, pour tout rapport et tout produit de données qui nomme un produit.
+  usage: Joindre sur product_sku pour nommer un produit ou regrouper ventes et stock par catégorie.
+team:
+  name: catalog
+  members:
+    - username: lea.fontaine
+      role: data analyst
+    - username: marc.dubois
+      role: data steward
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+servers:
+  - server: warehouse
+    type: bigquery
+    project: ${GCP_PROJECT}
+    dataset: ${PRODUCTS_DATASET}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: processing
+schema:
+  - name: products
+    physicalName: products
+    businessName: Produits
+    description: Une ligne par produit que Cyclomatic vend ou a vendu.
+    synonyms:
+      - synonym: catalog
+      - synonym: référentiel produits
+        locale: fr-FR
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
+    quality:
+      - name: products_sku_is_unique
+        severity: error
+        type: sql
+        dimension: uniqueness
+        query: SELECT COUNT(*) - COUNT(DISTINCT product_sku) FROM products
+        mustBe: 0
+    context:
+      instructions: >-
+        Une ligne par produit, en vente ou non : is_active les distingue. Joindre sur product_sku
+        pour nommer les produits de daily_sales ou de stock_availability. Les accessoires sont aussi
+        des produits : écarter la catégorie 'accessory' quand la question porte sur les vélos.
+      verifiedStatements:
+        - question: Quelles catégories de vélos Cyclomatic vend-elle ?
+          answer: Lister les category distinctes des produits actifs, sans 'accessory'.
+        - question: Quel est le vélo électrique le plus cher ?
+    properties:
+      - name: product_sku
+        logicalType: string
+        description: La référence du produit, son code SKU.
+        primaryKey: true
+        required: true
+        examples:
+          - CTY-0421
+          - EBK-0107
+      - name: product_name
+        logicalType: string
+        description: Le nom du produit affiché aux clients.
+        required: true
+        semanticType: dimension
+      - name: category
+        logicalType: string
+        description: La famille du produit.
+        required: true
+        semanticType: dimension
+        enum:
+          - value: city
+          - value: electric
+          - value: road
+          - value: mountain
+          - value: kids
+          - value: accessory
+      - name: is_bike
+        logicalType: boolean
+        description: Vrai pour un vélo, faux pour un accessoire.
+        semanticType: dimension
+        transformLogic: category <> 'accessory'
+      - name: list_price
+        logicalType: number
+        description: Le prix catalogue actuel, en euros TTC.
+        required: true
+        synonyms:
+          - synonym: prix catalogue
+            locale: fr-FR
+      - name: is_active
+        logicalType: boolean
+        description: Vrai tant que le produit est en vente.
+        required: true
+        semanticType: dimension
+      - name: product_count
+        logicalType: integer
+        description: Le nombre de produits.
+        semanticType: measure
+        transformLogic: COUNT(*)
+      - name: average_list_price
+        logicalType: number
+        description: Le prix catalogue moyen, en euros TTC.
+        semanticType: measure
+        transformLogic: AVG(list_price)

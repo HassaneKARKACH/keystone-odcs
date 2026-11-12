@@ -1,0 +1,110 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: customer_value
+name: customer_value
+version: 0.3.0
+domain: customer
+status: draft
+description:
+  purpose: Ce que chaque client a acheté jusqu'ici, pour cibler les campagnes de fidélité.
+  usage: Construit à partir de raw_customers, raw_web_orders et raw_store_sales.
+  limitations: >-
+    Une vente en magasin ne compte que si le client présente sa carte de fidélité. La table est un
+    brouillon : ses colonnes peuvent encore changer.
+team:
+  name: customer-insights
+  members:
+    - username: camille.roux
+      role: owner
+    - username: yanis.morel
+      role: data scientist
+slaProperties:
+  - property: frequency
+    value: 7
+    unit: d
+servers:
+  - server: warehouse
+    type: bigquery
+    project: ${GCP_PROJECT}
+    dataset: ${PRODUCTS_DATASET}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: processing
+schema:
+  - name: customer_value
+    physicalName: customer_value
+    businessName: Valeur client
+    description: Une ligne par client ayant acheté au moins une fois, avec ses achats depuis le premier.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
+    quality:
+      - name: customer_value_last_purchase_after_first
+        severity: error
+        type: sql
+        dimension: consistency
+        query: SELECT COUNT(*) FROM customer_value WHERE last_purchase_date < first_purchase_date
+        mustBe: 0
+    context:
+      instructions: >-
+        Une ligne par client ayant acheté au moins une fois, en ligne ou en magasin. Le chiffre
+        d'affaires est en euros HT. La table est un brouillon : le dire dans toute réponse qui
+        s'appuie dessus.
+      verifiedStatements:
+        - question: Quelle part des clients est revenue pour un deuxième achat ?
+          answer: Utiliser la mesure repeat_rate, la part des lignes dont purchase_count dépasse 1.
+        - question: Les membres du programme de fidélité dépensent-ils plus que les autres clients ?
+      constraints:
+        - constraint: Ne pas lister de clients individuels. Répondre avec des comptages, des parts et des moyennes.
+    properties:
+      - name: customer_id
+        logicalType: string
+        description: Le numéro du compte client.
+        primaryKey: true
+        required: true
+      - name: first_purchase_date
+        logicalType: date
+        description: Le jour du premier achat, en ligne ou en magasin.
+        required: true
+      - name: last_purchase_date
+        logicalType: date
+        description: Le jour du dernier achat.
+        required: true
+      - name: purchase_count
+        logicalType: integer
+        description: Le nombre de commandes et de tickets du client.
+        required: true
+      - name: lifetime_revenue
+        logicalType: number
+        description: Le chiffre d'affaires réalisé avec le client depuis son premier achat, en euros HT.
+        required: true
+      - name: is_loyalty_member
+        logicalType: boolean
+        description: Vrai quand le client fait partie du programme de fidélité.
+        required: true
+        semanticType: dimension
+      - name: cohort_year
+        logicalType: integer
+        description: L'année du premier achat.
+        semanticType: dimension
+        transformLogic: EXTRACT(YEAR FROM first_purchase_date)
+      - name: customer_count
+        logicalType: integer
+        description: Le nombre de clients.
+        semanticType: measure
+        transformLogic: COUNT(*)
+      - name: average_lifetime_revenue
+        logicalType: number
+        description: Le chiffre d'affaires moyen par client, en euros HT.
+        semanticType: measure
+        transformLogic: AVG(lifetime_revenue)
+      - name: repeat_rate
+        logicalType: number
+        description: La part des clients qui ont acheté plus d'une fois, de 0 à 1.
+        semanticType: measure
+        transformLogic: AVG(CASE WHEN purchase_count > 1 THEN 1.0 ELSE 0.0 END)

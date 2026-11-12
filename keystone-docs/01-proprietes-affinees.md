@@ -79,7 +79,7 @@ dans une colonne `object` ou `array`.
 
 ## Un contrat conforme
 
-Il porte aussi la fréquence et le mode de chargement qu'exige
+Il porte aussi la fréquence, le mode de chargement et la couche qu'exige
 l'[extension « traitement de données »](03-extension-traitement.md), et le
 [contexte destiné aux agents IA](06-agent-semantique.md).
 
@@ -108,6 +108,9 @@ schema:
       - property: loadMode
         vendor: db-keystone
         value: overwrite
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
     context:
       instructions: One row per example.
       verifiedStatements:

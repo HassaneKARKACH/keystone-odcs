@@ -1,2 +1,4 @@
 # Official ODCS schemas are vendored byte for byte: no line-ending conversion.
 keystone-core/src/keystone_core/schemas/odcs-json-schema-*.json -text
+# Bash fails on CRLF line endings, even on Windows.
+*.sh text eol=lf

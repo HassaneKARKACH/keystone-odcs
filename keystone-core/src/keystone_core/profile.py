@@ -37,6 +37,9 @@ FORBIDDEN_FIELDS = {
 LOAD_MODES = ("append", "overwrite", "incremental")
 # A watermark is the time of the last change of a row.
 WATERMARK_TYPES = ("date", "timestamp")
+# A table copies a source system, or is built from other tables of the lake.
+LAYERS = ("ingestion", "dataProduct")
+SERVER_ROLES = ("source", "destination", "processing")
 # What a failed quality check does: warn, or stop the load.
 SEVERITIES = ("warning", "error")
 # A sum, a count or a ratio gives a number.
@@ -65,6 +68,10 @@ def validate_profile(contract: dict) -> list[Violation]:
     _frequency(contract, found)
     _sla_units(contract, found)
     _latency_element(contract, found)
+    _layer(contract, found)
+    _server_roles(contract, found)
+    _ingestion_servers(contract, found)
+    _product_server(contract, found)
     # Axis 4: data quality.
     _sql_checks(contract, found)
     _check_names(contract, found)
@@ -196,7 +203,7 @@ def _forbidden_fields(contract: dict, found: list[Violation]) -> None:
 
 
 # ======================================================================
-# Axis 3: data processing. How the table is loaded.
+# Axis 3: data processing. How the table is loaded, and from where.
 # ======================================================================
 
 
@@ -258,6 +265,54 @@ def _latency_element(contract: dict, found: list[Violation]) -> None:
             found.append(Violation(f"$.slaProperties[{i}].element", "missing: a latency is measured on a column"))
         elif item["element"] not in columns:
             found.append(Violation(f"$.slaProperties[{i}].element", f"'{item['element']}': not a column of the table"))
+
+
+def _layer(contract: dict, found: list[Violation]) -> None:
+    # ODCS cannot tell a copy of a source from a table built in the lake, and the servers depend on it.
+    for table, path in _tables(contract):
+        layer = _keystone(table).get("layer")
+        if layer is None:
+            message = "missing: a table says if it is an ingestion or a data product, in layer"
+            found.append(Violation(f"{path}.customProperties", message))
+        elif layer not in LAYERS:
+            found.append(Violation(f"{path}.customProperties", f"'{layer}': layer is ingestion or dataProduct"))
+
+
+def _server_roles(contract: dict, found: list[Violation]) -> None:
+    # ODCS says where a server is, not what it is for.
+    for i, server in enumerate(contract.get("servers", [])):
+        role = _keystone(server).get("serverRole")
+        where = f"$.servers[{i}].customProperties"
+        if role is None:
+            message = "missing: a server says if it is a source, a destination or a processing server, in serverRole"
+            found.append(Violation(where, message))
+        elif role not in SERVER_ROLES:
+            found.append(Violation(where, f"'{role}': serverRole is source, destination or processing"))
+
+
+def _ingestion_servers(contract: dict, found: list[Violation]) -> None:
+    # An ingestion copies a source into the lake: the contract names both ends.
+    if _layer_of(contract) != "ingestion":
+        return
+    roles = [_keystone(server).get("serverRole") for server in contract.get("servers", [])]
+    if "source" not in roles:
+        found.append(Violation("$.servers", "no source server: an ingestion names where its data comes from"))
+    if "destination" not in roles:
+        found.append(Violation("$.servers", "no destination server: an ingestion names where its data lands"))
+
+
+def _product_server(contract: dict, found: list[Violation]) -> None:
+    # A data product reads other contracts of the lake: the only server of its own is where it is built.
+    if _layer_of(contract) != "dataProduct":
+        return
+    servers = contract.get("servers", [])
+    if len(servers) > 1:
+        message = f"{len(servers)} servers: a data product has at most one, the server where it is built"
+        found.append(Violation("$.servers", message))
+    elif servers and _keystone(servers[0]).get("serverRole") in ("source", "destination"):
+        role = _keystone(servers[0])["serverRole"]
+        message = f"'{role}': the server of a data product is where it is built, serverRole: processing"
+        found.append(Violation("$.servers[0].customProperties", message))
 
 
 # ======================================================================
@@ -361,6 +416,12 @@ def _quality_checks(contract: dict):
     for element, path in [*_tables(contract), *_columns(contract)]:
         for i, check in enumerate(element.get("quality", [])):
             yield check, f"{path}.quality[{i}]"
+
+
+def _layer_of(contract: dict) -> str | None:
+    """The layer of the contract, read on its table."""
+    tables = contract.get("schema", [])
+    return _keystone(tables[0]).get("layer") if tables else None
 
 
 def _keystone(element: dict) -> dict:

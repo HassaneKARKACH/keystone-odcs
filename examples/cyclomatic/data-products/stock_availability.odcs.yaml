@@ -1,0 +1,113 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: stock_availability
+name: stock_availability
+version: 1.0.0
+domain: inventory
+status: active
+description:
+  purpose: Ce qu'un client peut acheter dans chaque magasin, jour après jour, pour repérer les ruptures.
+  usage: Construit à partir de raw_stock_snapshots, sans l'entrepôt.
+team:
+  name: supply-chain
+  members:
+    - username: thomas.nguyen
+      role: owner
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: d
+servers:
+  - server: warehouse
+    type: bigquery
+    project: ${GCP_PROJECT}
+    dataset: ${PRODUCTS_DATASET}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: processing
+schema:
+  - name: stock_availability
+    physicalName: stock_availability
+    businessName: Disponibilité en magasin
+    description: Une ligne par jour, magasin et produit, avec les unités qu'un client pouvait acheter à la fermeture.
+    synonyms:
+      - synonym: disponibilité en magasin
+        locale: fr-FR
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: append
+      - property: layer
+        vendor: db-keystone
+        value: dataProduct
+    quality:
+      - name: stock_availability_has_yesterday
+        severity: error
+        type: sql
+        dimension: timeliness
+        query: SELECT COUNT(*) FROM stock_availability WHERE snapshot_date = CURRENT_DATE - INTERVAL '1' DAY
+        mustBeGreaterThan: 0
+    context:
+      instructions: >-
+        Une photo par jour du stock qu'un client peut acheter dans chaque magasin. Choisir une seule
+        snapshot_date, la plus récente pour le stock du jour ; ne jamais sommer units_available sur
+        plusieurs jours. La mesure out_of_stock_rate peut se moyenner sur plusieurs jours.
+      verifiedStatements:
+        - question: Quels produits sont en rupture dans le magasin de Lyon ?
+          answer: >-
+            Sur la snapshot_date la plus récente, lister les product_sku du store_id 'LYON-01' dont
+            units_available vaut 0, avec leur product_name tiré de products.
+        - question: Quel est le taux de rupture des vélos électriques cette semaine ?
+    properties:
+      - name: snapshot_date
+        logicalType: date
+        description: Le jour du comptage, à la fermeture.
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+        partitioned: true
+        partitionKeyPosition: 1
+        semanticType: dimension
+      - name: store_id
+        logicalType: string
+        description: Le magasin qui détient le stock.
+        primaryKey: true
+        primaryKeyPosition: 2
+        required: true
+        semanticType: dimension
+      - name: product_sku
+        logicalType: string
+        description: Le produit compté.
+        primaryKey: true
+        primaryKeyPosition: 3
+        required: true
+        semanticType: dimension
+        relationships:
+          - to: products.product_sku
+      - name: units_available
+        logicalType: integer
+        description: Les unités en stock qu'aucune commande n'a réservées.
+        required: true
+        quality:
+          - name: stock_availability_units_are_not_negative
+            severity: error
+            type: sql
+            dimension: accuracy
+            query: SELECT COUNT(*) FROM stock_availability WHERE units_available < 0
+            mustBe: 0
+      - name: is_out_of_stock
+        logicalType: boolean
+        description: Vrai quand aucune unité n'est disponible.
+        semanticType: dimension
+        transformLogic: units_available = 0
+      - name: total_units_available
+        logicalType: integer
+        description: Les unités disponibles sur les lignes retenues ; n'a de sens que pour un seul jour.
+        semanticType: measure
+        transformLogic: SUM(units_available)
+      - name: out_of_stock_rate
+        logicalType: number
+        description: La part des couples magasin et produit sans unité disponible, de 0 à 1.
+        semanticType: measure
+        transformLogic: AVG(CASE WHEN units_available = 0 THEN 1.0 ELSE 0.0 END)

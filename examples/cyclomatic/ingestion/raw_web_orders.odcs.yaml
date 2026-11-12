@@ -1,0 +1,135 @@
+apiVersion: v3.2.0
+kind: DataContract
+id: raw_web_orders
+name: raw_web_orders
+version: 1.1.0
+domain: sales
+status: active
+description:
+  purpose: Les lignes de commande de la boutique en ligne, copiées telles quelles depuis sa base.
+  limitations: Les prix sont TTC. Les lignes annulées et retournées restent dans la table avec leur statut.
+team:
+  name: data-platform
+  members:
+    - username: hugo.lambert
+      role: owner
+    - username: nadia.cherif
+      role: data engineer
+slaProperties:
+  - property: frequency
+    value: 1
+    unit: h
+  - property: latency
+    value: 2
+    unit: h
+    element: updated_at
+servers:
+  - server: eshop_db
+    type: postgres
+    host: ${ESHOP_DB_HOST}
+    port: ${ESHOP_DB_PORT}
+    database: ${ESHOP_DB_NAME}
+    schema: ${ESHOP_DB_SCHEMA}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: source
+  - server: lakehouse
+    type: iceberg
+    catalog: ${LAKE_CATALOG}
+    catalogUrl: https://catalog.cyclomatic.example/api/catalog
+    namespace: ${LAKE_RAW_NAMESPACE}
+    customProperties:
+      - property: serverRole
+        vendor: db-keystone
+        value: destination
+schema:
+  - name: raw_web_orders
+    physicalName: raw_web_orders
+    businessName: Lignes de commande web
+    description: Une ligne par ligne de commande passée sur la boutique en ligne.
+    customProperties:
+      - property: loadMode
+        vendor: db-keystone
+        value: incremental
+      - property: watermarkColumn
+        vendor: db-keystone
+        value: updated_at
+      - property: layer
+        vendor: db-keystone
+        value: ingestion
+    quality:
+      - name: raw_web_orders_received_today
+        severity: warning
+        type: sql
+        dimension: timeliness
+        description: La boutique prend des commandes tous les jours, même le dimanche.
+        query: SELECT COUNT(*) FROM raw_web_orders WHERE ordered_at >= CURRENT_DATE
+        mustBeGreaterThan: 0
+    context:
+      instructions: >-
+        Une ligne par ligne de commande de la boutique en ligne, telle que sa base la tient. Les prix
+        sont en euros TTC. Écarter les lignes annulées avant de sommer les ventes. Pour les ventes de
+        tous les canaux, utiliser plutôt le produit de données daily_sales.
+      verifiedStatements:
+        - question: Combien de commandes ont été passées en ligne hier ?
+          answer: Compter les order_id distincts dont ordered_at tombe hier, sans les lignes annulées.
+        - question: Quels produits sont le plus retournés ?
+    properties:
+      - name: order_id
+        logicalType: string
+        description: Le numéro de la commande.
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+        examples:
+          - WEB-2026-004512
+      - name: line_number
+        logicalType: integer
+        description: La position de la ligne dans la commande, à partir de 1.
+        primaryKey: true
+        primaryKeyPosition: 2
+        required: true
+      - name: ordered_at
+        logicalType: timestamp
+        description: La date et l'heure de la commande.
+        required: true
+      - name: customer_id
+        logicalType: string
+        description: Le client qui a passé la commande.
+        required: true
+      - name: product_sku
+        logicalType: string
+        description: Le produit commandé.
+        required: true
+        examples:
+          - CTY-0421
+      - name: quantity
+        logicalType: integer
+        description: Le nombre d'unités du produit commandées.
+        required: true
+        quality:
+          - name: raw_web_orders_quantity_is_positive
+            severity: error
+            type: sql
+            dimension: accuracy
+            query: SELECT COUNT(*) FROM raw_web_orders WHERE quantity <= 0
+            mustBe: 0
+      - name: unit_price
+        logicalType: number
+        description: Le prix d'une unité, en euros TTC.
+        required: true
+      - name: order_status
+        logicalType: string
+        description: L'état de la ligne de commande.
+        required: true
+        enum:
+          - value: placed
+          - value: shipped
+          - value: delivered
+          - value: cancelled
+          - value: returned
+      - name: updated_at
+        logicalType: timestamp
+        description: La date et l'heure de la dernière modification de la ligne dans la base de la boutique en ligne.
+        required: true
