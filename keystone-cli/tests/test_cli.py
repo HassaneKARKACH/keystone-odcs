@@ -30,6 +30,11 @@ schema:
       - property: loadMode
         vendor: db-keystone
         value: overwrite
+    context:
+      instructions: One row per example.
+      verifiedStatements:
+        - question: How many examples are there?
+          answer: Count the rows of a_table.
     properties:
       - name: a_column
         logicalType: string

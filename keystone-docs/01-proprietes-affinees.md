@@ -80,7 +80,8 @@ dans une colonne `object` ou `array`.
 ## Un contrat conforme
 
 Il porte aussi la fréquence et le mode de chargement qu'exige
-l'[extension « traitement de données »](03-extension-traitement.md).
+l'[extension « traitement de données »](03-extension-traitement.md), et le contexte destiné aux
+agents IA.
 
 ```yaml
 apiVersion: v3.2.0
@@ -107,6 +108,11 @@ schema:
       - property: loadMode
         vendor: db-keystone
         value: overwrite
+    context:
+      instructions: One row per example.
+      verifiedStatements:
+        - question: How many examples are there?
+          answer: Count the rows of a_table.
     properties:
       - name: a_column
         logicalType: string

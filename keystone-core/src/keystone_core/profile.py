@@ -72,6 +72,9 @@ def validate_profile(contract: dict) -> list[Violation]:
     # Axis 5: semantic model.
     _measure_logic(contract, found)
     _measure_type(contract, found)
+    # Axis 6: semantic agent.
+    _agent_instructions(contract, found)
+    _agent_questions(contract, found)
     return found
 
 
@@ -306,6 +309,33 @@ def _measure_type(contract: dict, found: list[Violation]) -> None:
         if column["logicalType"] not in MEASURE_TYPES:
             message = f"'{column['logicalType']}': a measure is a number or an integer"
             found.append(Violation(f"{path}.logicalType", message))
+
+
+# ======================================================================
+# Axis 6: semantic agent. Agentic first: every table tells an agent how to use it.
+# ======================================================================
+
+
+def _agent_instructions(contract: dict, found: list[Violation]) -> None:
+    # Without instructions, an agent guesses what the table means. ODCS reads a plain string as them.
+    for table, path in _tables(contract):
+        context = table.get("context")
+        if context is None:
+            found.append(Violation(f"{path}.context", "missing: a table tells an agent how to use it"))
+        elif isinstance(context, dict) and "instructions" not in context:
+            found.append(Violation(f"{path}.context.instructions", "missing: a table tells an agent how to use it"))
+
+
+def _agent_questions(contract: dict, found: list[Violation]) -> None:
+    # A question with its answer shows an agent what can be asked and how to answer it.
+    for table, path in _tables(contract):
+        context = table.get("context")
+        if context is None:
+            continue
+        statements = context.get("verifiedStatements", []) if isinstance(context, dict) else []
+        if not any("answer" in statement for statement in statements):
+            message = "missing: a table gives an agent a question with its answer"
+            found.append(Violation(f"{path}.context.verifiedStatements", message))
 
 
 # ======================================================================

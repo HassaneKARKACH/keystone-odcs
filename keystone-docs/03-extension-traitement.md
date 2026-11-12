@@ -121,6 +121,11 @@ schema:
       - property: watermarkColumn
         vendor: db-keystone
         value: updated_at
+    context:
+      instructions: One row per example.
+      verifiedStatements:
+        - question: How many examples are there?
+          answer: Count the rows of a_table.
     properties:
       - name: a_column
         logicalType: string

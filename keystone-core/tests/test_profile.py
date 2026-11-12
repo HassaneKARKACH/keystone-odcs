@@ -24,6 +24,12 @@ def contract():
                 "physicalName": "a_table",
                 "description": "One row per example.",
                 "customProperties": [{"property": "loadMode", "vendor": "db-keystone", "value": "overwrite"}],
+                "context": {
+                    "instructions": "One row per example.",
+                    "verifiedStatements": [
+                        {"question": "How many examples are there?", "answer": "Count the rows of a_table."}
+                    ],
+                },
                 "properties": [
                     {
                         "name": "a_column",
@@ -369,4 +375,45 @@ def test_a_measure_is_a_number(contract, measure):
 
 def test_a_dimension_can_be_the_column_itself(contract, column):
     column["semanticType"] = "dimension"
+    assert validate_profile(contract) == []
+
+
+NO_ANSWERED_QUESTION = Violation(
+    "$.schema[0].context.verifiedStatements", "missing: a table gives an agent a question with its answer"
+)
+
+
+def test_a_table_tells_an_agent_how_to_use_it(contract, table):
+    del table["context"]
+    assert validate_profile(contract) == [
+        Violation("$.schema[0].context", "missing: a table tells an agent how to use it")
+    ]
+
+
+def test_a_context_has_instructions(contract, table):
+    del table["context"]["instructions"]
+    assert validate_profile(contract) == [
+        Violation("$.schema[0].context.instructions", "missing: a table tells an agent how to use it")
+    ]
+
+
+def test_a_table_gives_an_agent_a_question_with_its_answer(contract, table):
+    del table["context"]["verifiedStatements"]
+    assert validate_profile(contract) == [NO_ANSWERED_QUESTION]
+
+
+def test_a_question_without_answer_is_not_enough(contract, table):
+    del table["context"]["verifiedStatements"][0]["answer"]
+    assert validate_profile(contract) == [NO_ANSWERED_QUESTION]
+
+
+def test_a_plain_string_is_read_as_instructions(contract, table):
+    # The short form carries instructions only: the answered question is still missing.
+    table["context"] = "One row per example."
+    assert validate_profile(contract) == [NO_ANSWERED_QUESTION]
+
+
+def test_other_questions_may_go_without_answer(contract, table):
+    table["context"]["verifiedStatements"].append({"question": "What is the total amount per month?"})
+    assert validate_odcs(contract) == []
     assert validate_profile(contract) == []
